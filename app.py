@@ -338,15 +338,13 @@ def delete_recruiter(id):
 
 def init_db():
     with app.app_context():
-        # Only create tables if they don't already exist. 
-        # Removing db.drop_all() ensures your existing data is preserved.
         db.create_all()
-        
-        # Ensure a default admin user exists if the table is empty
         if not User.query.first():
             db.session.add(User(username='placement', password='password123'))
             db.session.commit()
 
+# Automatically run table creation on production startup (Gunicorn)
+init_db()
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0')

@@ -1,0 +1,100 @@
+<!-- recruiters.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <h2 class="fw-bold">Recruiters & HR Connections</h2>
+    <div>
+        <a href="{{ url_for('add_recruiter_direct') }}" class="btn btn-success shadow-sm btn-sm">Add Recruiter</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary shadow-sm">Back to Alumni</a>
+                <form action="{{ url_for('reset_all_recruiters_progress') }}" method="POST" onsubmit="return confirm('Are you sure you want to reset progress for ALL companies at once?');" class="d-inline">
+                    <button type="submit" class="btn btn-warning shadow-sm btn-sm">Reset All Progress</button>
+                </form>
+    </div>
+</div>
+
+<!-- Company Filter Section -->
+<div class="card shadow-sm mb-4 bg-white border-0">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('recruiters_dashboard') }}" class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Filter by Company Name</label>
+                <select name="company_name" class="form-select form-select-sm">
+                    <option value="">All Companies</option>
+                    {% for comp in all_companies %}
+                    <option value="{{ comp }}" {% if request.args.get('company_name') == comp %}selected{% endif %}>{{ comp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2 mt-4">
+                <button type="submit" class="btn btn-sm btn-info text-white">Apply Filter</button>
+                <a href="{{ url_for('recruiters_dashboard') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+   
+</div>
+
+<hr class="mb-4">
+
+<div class="row">
+    {% for recruiter in recruiters %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card shadow-sm border-info h-100">
+            <div class="card-header bg-info text-dark fw-bold">
+                <h5 class="mb-0">{{ recruiter.company_name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 mb-3">
+                    <a href="{{ url_for('edit_recruiters', id=recruiter.id) }}" class="btn btn-outline-secondary btn-sm w-50">Edit Details</a>
+                   <form action="{{ url_for('delete_recruiter', id=recruiter.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ recruiter.company_name }}?');">
+    <button type="submit" class="btn btn-outline-danger btn-sm w-100">Delete Recruiter</button>
+</form>
+                </div>
+                <div class="alert alert-secondary py-2 mb-3 small">
+                    <strong>Referred By:</strong> {{ recruiter.referred_by.name }} (Batch: {{ recruiter.referred_by.batch }})<br>
+                    <em>Date: {{ recruiter.reference_date.strftime('%Y-%m-%d') }}</em>
+                </div>
+
+                <p class="mb-1"><strong>HR/Contact:</strong> {{ recruiter.contact_name }}</p>
+                <p class="mb-1"><strong>Email:</strong> <a href="mailto:{{ recruiter.contact_email }}">{{ recruiter.contact_email }}</a></p>
+                <p class="mb-3"><strong>Phone:</strong> {{ recruiter.contact_phone }}</p>
+                
+                {% if recruiter.hiring_remarks %}
+                <div class="alert alert-warning py-2 mt-2 mb-3 small">
+                    <strong>Hiring Requirements:</strong><br>{{ recruiter.hiring_remarks }}
+                </div>
+                {% endif %}
+
+                <hr>
+
+                <!-- Recruiter Progress Tracking -->
+                <h6 class="fw-bold text-muted mb-2">Hiring Discussion Progress</h6>
+                
+                <form action="{{ url_for('add_recruiters_progress', recruiter_id=recruiter.id) }}" method="POST" class="d-flex gap-2 mb-2">
+                    <input type="text" name="action_text" class="form-control form-control-sm" placeholder="E.g., Scheduled interview..." required>
+                    <button type="submit" class="btn btn-sm btn-primary">Log</button>
+                </form>
+
+                <ul class="list-group list-group-flush mb-2" style="max-height: 120px; overflow-y: auto;">
+                    {% for log in recruiter.progress_logs %}
+                    <li class="list-group-item py-1 px-0 border-0" style="font-size: 0.85rem;">
+                        <span class="text-muted fw-bold">{{ log.action_date.strftime('%d %b') }}:</span> {{ log.action_text }}
+                    </li>
+                    {% else %}
+                    <li class="list-group-item py-1 px-0 border-0 text-muted" style="font-size: 0.85rem;"><em>No logs for this company yet.</em></li>
+                    {% endfor %}
+                </ul>
+
+                <form action="{{ url_for('reset_recruiters_progress', recruiter_id=recruiter.id) }}" method="POST" onsubmit="return confirm('Delete all progress logs for {{ recruiter.company_name }}?');">
+                    <button type="submit" class="btn btn-sm btn-danger w-100">Reset Progress</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info shadow-sm">No recruiter references have been added yet. Add one via an Alumni profile!</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

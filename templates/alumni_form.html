@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center mb-5">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label fw-bold") }}
+                        {{ form.name(class="form-control") }}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.course.label(class="form-label fw-bold") }}
+                            {{ form.course(class="form-select") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.batch.label(class="form-label fw-bold") }}
+                            {{ form.batch(class="form-control", placeholder="e.g. 2006-2009") }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.phone.label(class="form-label fw-bold") }}
+                            {{ form.phone(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.email.label(class="form-label fw-bold") }}
+                            {{ form.email(class="form-control") }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.organization.label(class="form-label fw-bold") }}
+                            {{ form.organization(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.position.label(class="form-label fw-bold") }}
+                            {{ form.position(class="form-control") }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            {{ form.area_of_interest.label(class="form-label fw-bold") }}
+                            {{ form.area_of_interest(class="form-control", placeholder="e.g., Patent Prosecution, IP Litigation") }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.open_to_hiring.label(class="form-label fw-bold") }}
+                            {{ form.open_to_hiring(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.conversation_remarks.label(class="form-label fw-bold") }}
+                        {{ form.conversation_remarks(class="form-control", rows="3", placeholder="Enter notes related to your conversation/outreach with the alumnus...") }}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

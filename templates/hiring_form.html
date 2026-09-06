@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-7">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Add recruiters Reference</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Fill out the contact information for the hiring team or HR personnel provided by <strong>{{ alumni.name }}</strong> ({{ alumni.organization }}).</p>
+                <hr>
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.company_name.label(class="form-label fw-bold") }}
+                        {{ form.company_name(class="form-control", placeholder="e.g. Legal Firm LLP or Tech Corp") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.contact_name.label(class="form-label fw-bold") }}
+                        {{ form.contact_name(class="form-control", placeholder="e.g. Ms. Ananya Sharma (HR Lead)") }}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.contact_email.label(class="form-label fw-bold") }}
+                            {{ form.contact_email(class="form-control", placeholder="e.g. hr@company.com") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.contact_phone.label(class="form-label fw-bold") }}
+                            {{ form.contact_phone(class="form-control", placeholder="e.g. +91 9876543210") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.hiring_remarks.label(class="form-label fw-bold") }}
+                        {{ form.hiring_remarks(class="form-control", rows="3", placeholder="Enter specific hiring process criteria, preferred legal domains, active openings, etc.") }}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-success", value="Save recruiters") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

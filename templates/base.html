@@ -12,7 +12,7 @@
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}"> 
             <img src="{{ url_for('static', filename='iit.png') }}" width="40" height="40" class="me-2 rounded" alt="IIT Logo">  
-            RGSOIPL Alumni Database 
+            RGSOIPL Directory
         </a>
         
         {% if current_user.is_authenticated %}
@@ -25,7 +25,7 @@
                     <a class="nav-link" href="{{ url_for('dashboard') }}">Alumni Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('recruiters_dashboard') }}">recruiters Dashboard</a>
+                    <a class="nav-link" href="{{ url_for('recruiters_dashboard') }}">Recruiters Dashboard</a>
                 </li>
             </ul>
             <div class="d-flex">

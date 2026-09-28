@@ -12,6 +12,7 @@ from sqlalchemy import text
 from functools import wraps
 from flask import abort
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 
 app = Flask(__name__)
@@ -22,7 +23,9 @@ db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhos
 
 # Render uses 'postgres://' which SQLAlchemy 3.x rejects; fix prefix automatically
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+elif db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
@@ -38,6 +41,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
@@ -458,20 +462,28 @@ def delete_user(id):
 
 def init_db():
     with app.app_context():
+        # Create all tables first
         db.create_all()
-        if not User.query.filter_by(role='admin').first():
-            admin_username = os.environ.get('ADMIN_USERNAME')
-            admin_password = os.environ.get('ADMIN_PASSWORD')
-            if admin_username and admin_password:
-                admin = User(username=admin_username, role='admin')
-                admin.set_password(admin_password)
-                db.session.add(admin)
-                db.session.commit()
-                print(f"Created main admin user: {admin_username}")
-            else:
-                print("WARNING: no admin exists yet. Set ADMIN_USERNAME and ADMIN_PASSWORD env vars and restart.")
-# Automatically run table creation on production startup (Gunicorn)
+        try:
+            # Check if admin exists
+            if not User.query.filter_by(role='admin').first():
+                admin_username = os.environ.get('ADMIN_USERNAME')
+                admin_password = os.environ.get('ADMIN_PASSWORD')
+                if admin_username and admin_password:
+                    admin = User(username=admin_username, role='admin')
+                    admin.set_password(admin_password)
+                    db.session.add(admin)
+                    db.session.commit()
+                    print(f"Created main admin user: {admin_username}")
+                else:
+                    print("WARNING: no admin exists yet. Set ADMIN_USERNAME and ADMIN_PASSWORD env vars and restart.")
+        except (ProgrammingError, OperationalError):
+            # Prevents app crash if parallel Gunicorn workers query table before creation finishes
+            db.session.rollback()
+            print("Table setup skipped or already completed by another worker process.")
+
+# Run database setup safely on startup
 init_db()
+
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=False, host='0.0.0.0')

@@ -17,7 +17,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'rgsoipl_placement_secret')
 
-POSTGRESQL CONFIGURATION
+# POSTGRESQL CONFIGURATION
 db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhost/rgsoipl_alumni')
 
 # Render uses 'postgres://' which SQLAlchemy 3.x rejects; fix prefix automatically

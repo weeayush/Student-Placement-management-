@@ -9,11 +9,15 @@ from wtforms.validators import DataRequired, Optional
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import text
+from functools import wraps
+from flask import abort
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'rgsoipl_placement_secret')
 
-# POSTGRESQL CONFIGURATION
+POSTGRESQL CONFIGURATION
 db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhost/rgsoipl_alumni')
 
 # Render uses 'postgres://' which SQLAlchemy 3.x rejects; fix prefix automatically
@@ -22,6 +26,13 @@ if db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
+
+#  mysql set up ( enable it to check working on localhost set up )
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+#     'DATABASE_URL', 
+#     'mysql+pymysql://root:Ayush%40123@localhost/rgsoipl_alumni'
+# )
+
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -29,8 +40,14 @@ login_manager.login_view = 'login'
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='staff')  # 'admin', 'staff', 'viewer')
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
 
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+    
 class Alumni(db.Model):
     __tablename__ = 'alumni'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -88,6 +105,26 @@ class PlacementProgress(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if current_user.role != 'admin':
+            flash('You do not have permission to access that page.')
+            if current_user.role == 'viewer':
+                return redirect(url_for('recruiters_dashboard'))
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated
+
+def full_access_required(f):
+    """Blocks the read-only 'viewer' role from staff/admin pages."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if current_user.role == 'viewer':
+            flash('Your account only has viewing access to the Recruiters Dashboard.')
+            return redirect(url_for('recruiters_dashboard'))
+        return f(*args, **kwargs)
+    return decorated
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -115,8 +152,18 @@ class RecruiterForm(FlaskForm):
     hiring_remarks = TextAreaField('Specific Hiring Remarks / Requirements', validators=[Optional()])
     submit = SubmitField('Save Recruiter Details')
 
+class UserForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password (leave blank to keep unchanged)', validators=[Optional()])
+    role = SelectField('Access Level', choices=[
+        ('staff', 'Full Access (Temporary Staff)'),
+        ('viewer', 'Recruiter Dashboard Viewer (read-only)')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Save User')
+
 @app.route('/', methods=['GET'])
 @login_required
+@full_access_required
 def dashboard():
     search_name = request.args.get('name', '').strip()
     filter_batch = request.args.get('batch', '').strip()
@@ -167,9 +214,11 @@ def recruiters_dashboard():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data, password=form.password.data).first()
-        if user:
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
             login_user(user)
+            if user.role == 'viewer':
+                return redirect(url_for('recruiters_dashboard'))
             return redirect(url_for('dashboard'))
         flash('Invalid credentials.')
     return render_template('login.html', form=form)
@@ -182,6 +231,7 @@ def logout():
 
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
+@full_access_required
 def add_alumni():
     form = AlumniForm()
     if form.validate_on_submit():
@@ -199,6 +249,7 @@ def add_alumni():
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
+@full_access_required
 def edit_alumni(id):
     alumni = Alumni.query.get_or_404(id)
     form = AlumniForm(obj=alumni)
@@ -222,6 +273,7 @@ def edit_alumni(id):
 
 @app.route('/add_recruiters/<int:alumni_id>', methods=['GET', 'POST'])
 @login_required
+@full_access_required
 def add_recruiters(alumni_id):
     alumni = Alumni.query.get_or_404(alumni_id)
     form = RecruiterForm()
@@ -245,6 +297,7 @@ def add_recruiters(alumni_id):
 
 @app.route('/add_progress/<int:alumni_id>', methods=['POST'])
 @login_required
+@full_access_required
 def add_progress(alumni_id):
     alumni = Alumni.query.get_or_404(alumni_id)
     action_text = request.form.get('action_text')
@@ -257,6 +310,7 @@ def add_progress(alumni_id):
 
 @app.route('/add_recruiters_progress/<int:recruiter_id>', methods=['POST'])
 @login_required
+@full_access_required
 def add_recruiters_progress(recruiter_id):
     recruiter = Recruiter.query.get_or_404(recruiter_id)
     action_text = request.form.get('action_text')
@@ -269,6 +323,7 @@ def add_recruiters_progress(recruiter_id):
 
 @app.route('/reset_alumni_progress/<int:alumni_id>', methods=['POST'])
 @login_required
+@full_access_required
 def reset_alumni_progress(alumni_id):
     PlacementProgress.query.filter_by(alumni_id=alumni_id).delete()
     db.session.commit()
@@ -277,6 +332,7 @@ def reset_alumni_progress(alumni_id):
 
 @app.route('/edit_recruiters/<int:id>', methods=['GET', 'POST'])
 @login_required
+@full_access_required
 def edit_recruiters(id):
     recruiter = Recruiter.query.get_or_404(id)
     form = RecruiterForm(obj=recruiter)
@@ -291,6 +347,7 @@ def edit_recruiters(id):
 
 @app.route('/add_recruiter_direct', methods=['GET', 'POST'])
 @login_required
+@full_access_required
 def add_recruiter_direct():
     form = RecruiterForm()
     if form.validate_on_submit():
@@ -311,6 +368,7 @@ def add_recruiter_direct():
 
 @app.route('/reset_recruiters_progress/<int:recruiter_id>', methods=['POST'])
 @login_required
+@full_access_required
 def reset_recruiters_progress(recruiter_id):
     RecruiterProgress.query.filter_by(recruiter_id=recruiter_id).delete()
     db.session.commit()
@@ -319,6 +377,7 @@ def reset_recruiters_progress(recruiter_id):
 
 @app.route('/reset_all_recruiters_progress', methods=['POST'])
 @login_required
+@full_access_required
 def reset_all_recruiters_progress():
     # POSTGRESQL NATIVE CASCADING DELETE
     db.session.execute(text("TRUNCATE TABLE recruiter_progress RESTART IDENTITY CASCADE;"))
@@ -328,6 +387,7 @@ def reset_all_recruiters_progress():
 
 @app.route('/delete_recruiter/<int:id>', methods=['POST'])
 @login_required
+@full_access_required
 def delete_recruiter(id):
     recruiter = Recruiter.query.get_or_404(id)
     company_name = recruiter.company_name
@@ -336,13 +396,80 @@ def delete_recruiter(id):
     flash(f'Recruiter {company_name} deleted successfully.')
     return redirect(url_for('recruiters_dashboard'))
 
+@app.route('/users')
+@login_required
+@admin_required
+def manage_users():
+    users = User.query.filter(User.role != 'admin').order_by(User.username).all()
+    return render_template('users.html', users=users)
+
+@app.route('/users/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_user():
+    form = UserForm()
+    if form.validate_on_submit():
+        if not form.password.data:
+            flash('A password is required when creating a new user.')
+            return render_template('user_form.html', form=form, title="Create Temporary User")
+        new_user = User(username=form.username.data, role=form.role.data)
+        new_user.set_password(form.password.data)
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'User {new_user.username} created successfully.')
+        return redirect(url_for('manage_users'))
+    if request.method == 'POST':
+        print("FORM VALIDATION ERRORS:", form.errors)
+    return render_template('user_form.html', form=form, title="Create Temporary User")
+
+@app.route('/users/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_user(id):
+    user = User.query.get_or_404(id)
+    if user.role == 'admin':
+        abort(403)
+    form = UserForm(obj=user)
+    if request.method == 'GET':
+        form.password.data = ''
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.role = form.role.data
+        if form.password.data:
+            user.set_password(form.password.data)
+        db.session.commit()
+        flash(f'User {user.username} updated successfully.')
+        return redirect(url_for('manage_users'))
+    return render_template('user_form.html', form=form, title=f"Edit User: {user.username}")
+
+@app.route('/users/delete/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(id):
+    user = User.query.get_or_404(id)
+    if user.role == 'admin':
+        flash('Cannot delete the main admin account.')
+        return redirect(url_for('manage_users'))
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User {username} deleted successfully.')
+    return redirect(url_for('manage_users'))
+
 def init_db():
     with app.app_context():
         db.create_all()
-        if not User.query.first():
-            db.session.add(User(username='placement', password='password123'))
-            db.session.commit()
-
+        if not User.query.filter_by(role='admin').first():
+            admin_username = os.environ.get('ADMIN_USERNAME')
+            admin_password = os.environ.get('ADMIN_PASSWORD')
+            if admin_username and admin_password:
+                admin = User(username=admin_username, role='admin')
+                admin.set_password(admin_password)
+                db.session.add(admin)
+                db.session.commit()
+                print(f"Created main admin user: {admin_username}")
+            else:
+                print("WARNING: no admin exists yet. Set ADMIN_USERNAME and ADMIN_PASSWORD env vars and restart.")
 # Automatically run table creation on production startup (Gunicorn)
 init_db()
 if __name__ == '__main__':

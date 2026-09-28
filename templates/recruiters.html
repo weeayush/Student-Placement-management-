@@ -4,11 +4,13 @@
 <div class="d-flex justify-content-between align-items-end mb-4">
     <h2 class="fw-bold">Recruiters & HR Details </h2>
     <div>
+        {% if current_user.role != 'viewer' %}
         <a href="{{ url_for('add_recruiter_direct') }}" class="btn btn-success shadow-sm btn-sm">Add Recruiter</a>
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary shadow-sm">Back to Alumni</a>
                 <form action="{{ url_for('reset_all_recruiters_progress') }}" method="POST" onsubmit="return confirm('Are you sure you want to reset progress for ALL companies at once?');" class="d-inline">
                     <button type="submit" class="btn btn-warning shadow-sm btn-sm">Reset All Progress</button>
                 </form>
+                {% endif %}
     </div>
 </div>
 
@@ -44,6 +46,7 @@
                 <h5 class="mb-0">{{ recruiter.company_name }}</h5>
             </div>
             <div class="card-body">
+                 {% if current_user.role != 'viewer' %}
                 <div class="d-flex gap-2 mb-3">
                     <a href="{{ url_for('edit_recruiters', id=recruiter.id) }}" class="btn btn-outline-secondary btn-sm w-50">Edit Details</a>
                    <form action="{{ url_for('delete_recruiter', id=recruiter.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ recruiter.company_name }}?');">
@@ -63,6 +66,7 @@
                 <div class="alert alert-warning py-2 mt-2 mb-3 small">
                     <strong>Hiring Requirements:</strong><br>{{ recruiter.hiring_remarks }}
                 </div>
+                {% endif %}
                 {% endif %}
 
                 <hr>
@@ -84,10 +88,11 @@
                     <li class="list-group-item py-1 px-0 border-0 text-muted" style="font-size: 0.85rem;"><em>No logs for this company yet.</em></li>
                     {% endfor %}
                 </ul>
-
+                {% if current_user.role != 'viewer' %}
                 <form action="{{ url_for('reset_recruiters_progress', recruiter_id=recruiter.id) }}" method="POST" onsubmit="return confirm('Delete all progress logs for {{ recruiter.company_name }}?');">
                     <button type="submit" class="btn btn-sm btn-danger w-100">Reset Progress</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>

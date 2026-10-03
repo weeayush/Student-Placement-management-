@@ -93,6 +93,14 @@
                 <div class="d-flex gap-2 mb-3 mt-auto">
                     <a href="{{ url_for('edit_alumni', id=alumni.id) }}" class="btn btn-outline-primary btn-sm w-50">Edit Profile</a>
                     <a href="{{ url_for('add_recruiters', alumni_id=alumni.id) }}" class="btn btn-outline-success btn-sm w-50">+ Add recruiters</a>
+                    <form action="{{ url_for('delete_alumni', id=alumni.id) }}" method="POST"
+      onsubmit="return confirm('Are you sure you want to delete {{ alumni.name }}? This action cannot be undone.');"
+      class="w-50">
+
+    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+        Delete
+    </button>
+</form>
                 </div>
 
                 <hr>

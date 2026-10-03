@@ -400,6 +400,18 @@ def delete_recruiter(id):
     flash(f'Recruiter {company_name} deleted successfully.')
     return redirect(url_for('recruiters_dashboard'))
 
+@app.route('/delete_alumni/<int:id>', methods=['POST'])
+@login_required
+def delete_alumni(id):
+    alumni = Alumni.query.get_or_404(id)
+    alumni_name = alumni.name
+
+    db.session.delete(alumni)
+    db.session.commit()
+
+    flash(f'Alumni profile for {alumni_name} deleted successfully.')
+    return redirect(url_for('dashboard'))
+
 @app.route('/users')
 @login_required
 @admin_required
